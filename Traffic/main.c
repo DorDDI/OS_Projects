@@ -190,3 +190,28 @@ void* Generate(void* arg) {
     return NULL;
 }
 
+void* Print(void* arg) 
+//function for the array print
+{
+    int i;
+    struct timespec print_time;
+    struct timespec last_print_time;
+    double time_in_ns = 0;
+    int end_of_simulation = 0;
+    int number_of_prints = 0;
+    clock_gettime(CLOCK_REALTIME, &last_print_time);
+    while (!end_of_simulation)                                               //while the simulation isnt over
+    {                                           
+        clock_gettime(CLOCK_REALTIME, &print_time);
+        time_in_ns = (double)(print_time.tv_sec - last_print_time.tv_sec) * 1000000000 + (double)(print_time.tv_nsec - last_print_time.tv_nsec);
+        if (time_in_ns >= (SIM_TIME * 1000000000 / 10)) 
+        {
+            clock_gettime(CLOCK_REALTIME, &last_print_time);
+            Print_in_road();                                                //print the array
+            number_of_prints++;                                             //count the number of prints
+            if (number_of_prints == 10)                                     //print only 10 times                             
+                end_of_simulation = 1;
+        }
+    }
+    return NULL;
+}
