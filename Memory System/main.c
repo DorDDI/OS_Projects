@@ -327,3 +327,110 @@ void read_message(int qid_f, struct message* qbuf, long type)
 }
 
 
+void* MMU_main()
+{
+	int Miss_Hit;					//variable that will save if it was hit r miss
+	message send;					//struct for the send message
+	message recieve_proccess;		//struct for the recieive message from proccess
+	message recieve_HD;				//struct for the recieive message from HD
+
+	while (simflag)
+	{
+		//~~~~calculate probability~~~~
+		read_message(queue_id, &recieve_proccess, PROCCESS_REQ); //read the message that equal to the selected type
+		if (page_count == 0)				//if we dont have pages  
+			Miss_Hit = MISS;				//sure will be miss
+		else
+		{
+			int prob = rand() % 100;		//random a probability for miss/hit
+			if (prob < HIT_RATE * 100)		//check and save if the prob is miss/hit
+				Miss_Hit = HIT;
+			else
+				Miss_Hit = MISS;
+		}
+
+		if (Miss_Hit == MISS)				//prob = miss
+		{
+			if (page_count == N)			//if the queue is full, run the evicter
+				call_evicter();
+			//continue after finish the evicter func
+	
+			if (simflag == 0)
+				break;
+		//~~~~send to HD req~~~~
+
+			send.mtype = HD_REQ;			//type is HD request
+			send.ProcNum = HD_REQ;
+			strcpy(send.mtext, "Message is a HD_REQ");		//save the message
+			send_message(queue_id, &send);	//send the message
+			read_message(queue_id, &recieve_HD, HD_ACK); //read the message that equal to the selected type
+
+			if (simflag == 0)
+				break;
+
+			pages_lock();
+			page_table[(Queue_index + page_count) % N] = VALID; //change the page table safely
+			pages_unlock();
+
+			if (simflag == 0)
+				break;
+
+			count_lock();
+			page_count += 1;				//increase the counter safely
+			count_unlock();
+
+			if ((page_count > N) || (page_count < 0))  //error in the counter range - quit
+				quit_simulation(1);
+		}
+
+		else
+		{
+			if (Miss_Hit == HIT)
+			{
+			}								//do nothing - immediately action
+			else
+			{
+				printf("Error, invalid action for MMU_main\n");   //not hit ro miss - error
+				quit_simulation(1);
+			}
+		}
+
+		if (simflag == 0)
+			break;
+		//~~~~send acknowledge to the proccesses~~~~
+
+		if (recieve_proccess.ProcNum == 1)			//send to proccess 1
+			send.mtype = MMU_ACK_PROC1;
+		else		                              	//send to proccess 2
+			send.mtype = MMU_ACK_PROC2;
+		send.ProcNum = send.mtype;
+		strcpy(send.mtext, "MMU acknowledge");		//save the message
+
+		//~~~~handle the RD/WR request~~~~
+
+		if (recieve_proccess.reqType == WR_REQ)		//Write
+		{
+			if (simflag == 0)
+				break;
+			usleep(MEM_WR_T / (double)1000);
+			pages_lock();
+			page_table[(Queue_index + (rand() % page_count)) % N] = DIRTY; //change the page table saftly
+			pages_unlock();
+			send_message(queue_id, &send);			//send the message
+		}
+		else
+		{
+			if (simflag == 0)
+				break;
+			if (recieve_proccess.reqType == RD_REQ)	//Read
+				send_message(queue_id, &send);		//send the message
+			else                                    //not RD/WR - error
+			{
+				printf("Error invalid RD/WR request\n");
+				quit_simulation(1);
+			}
+		}
+	}
+}
+
+
