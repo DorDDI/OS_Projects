@@ -15,6 +15,7 @@
 #define SIM_TIME 2
 #define MAX_CARS  (int)(((SIM_TIME*1000000000)/(MIN_INTER_ARRIVAL_IN_NS))+10) //+10 for saftey
 #define lEN (4 * N - 4)
+
 //~~~~~~~~~~~~~~~~~~ prototype init~~~~~~~~~~~~~~~~~~~
 void* Step(void *arg);
 void* Print(void *arg);
@@ -42,7 +43,7 @@ int main()
     srand(time(NULL));   //init for the rand function
     int i;
 
- //~~~~~~~~~~~~~~~~~~ mutex init~~~~~~~~~~~~~~~~~~~
+    //~~~~~~~~~~~~~~~~~~ mutex init~~~~~~~~~~~~~~~~~~~
     
     if (pthread_mutexattr_init(&attr) != 0)                             //init for the attribute 
     {                          
@@ -81,8 +82,9 @@ int main()
     for(i=0;i<4*N-4;i++)                                                //delete the mutexes
         pthread_mutex_destroy(&cell_mutex[i]);
     return 0;
-	
-}void* Step(void *arg) 
+}
+
+void* Step(void *arg) 
 //function for move a car to the next place
 {                                                 
     int first_time = 1;                                                 //first time enter the road
@@ -189,6 +191,7 @@ void* Generate(void* arg) {
         pthread_join(cars[index][i], NULL);                                 //close all the cars threads of all the generators
     return NULL;
 }
+
 
 void* Print(void* arg) 
 //function for the array print
