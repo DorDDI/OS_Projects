@@ -434,3 +434,70 @@ void* MMU_main()
 }
 
 
+void* MMU_printer()
+//func for the MMU main printer
+{
+	message send;							//struct for the send message
+	int copy[N] = { 0 };					//array of the copied page table
+	int temp[N] = { 0 };					//array of the prev copied page table
+	int i;
+	int flag;								//flag if there is a problem
+
+	while (simflag) {
+		flag = 0;
+		pages_lock();
+		memcpy(copy, page_table, N * sizeof(int));		//copy the page table saftly
+		pages_unlock();
+
+		for (i = 0; i < N; i++)							//check if the sim is stuck
+		{
+			if (copy[i] != temp[i])
+				flag = 1;
+		}
+		//print the copied page table:
+		//INVALID -> "-", VALID -> "0", DIRTY -> "1"
+		if (simflag == 0)
+			break;
+		if (flag == 0)									//if the sim is stuck, refresh it
+		{
+			if (pthread_mutex_lock(&Condition_mutex))		//safely lock condition mutex
+			{
+				printf("Error in locking condition variable mutex\n");
+				quit_simulation(1);
+			}
+
+			if (pthread_cond_signal(&Evicter_condition))	//signal with the condition variable
+			{
+				printf("Error in signaling mmu\n");
+				quit_simulation(1);
+			}
+
+			if (pthread_mutex_unlock(&Condition_mutex))		//safely unlock condition mutex
+			{
+				printf("Error in unlocking condition variable mutex\n");
+				quit_simulation(1);
+			}
+
+		}
+		for (i = 0; i < N; i++) {
+			printf("%d|", i);
+			if (copy[i] == INVALID) {
+				printf("-\n");
+			}
+			else if (copy[i] == VALID) {
+				printf("0\n");
+			}
+			else if (copy[i] == DIRTY) {
+				printf("1\n");
+			}
+			else {
+				printf("Incorrect page value\n");
+			}
+		}
+		printf("\n\n");
+		memcpy(temp, copy, N * sizeof(int));			//save the copied array	
+		usleep(TIME_BETWEEN_SNAPSHOTS / (double)1000);
+	}
+}
+
+
