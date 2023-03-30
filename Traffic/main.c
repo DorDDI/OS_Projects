@@ -215,3 +215,26 @@ void* Print(void* arg)
     }
     return NULL;
 }
+
+void Print_in_road()
+//function for the print function
+{
+    int i;
+    char middle[N - 1];                                                     //line with @ in the middle
+    for (i = 0; i < N - 2; i++)                                             //generate the @ in the line
+        middle[i] = '@';
+    middle[N - 2] = '\0';                                                   //end with \0 in the end
+    printf("\n");
+    for (i = N - 1; i >= 0; i--)                                            //prinit the first line
+        printf("%c", Print_road[i]);
+    printf("\n");
+    for (i = 0; i < N - 2; i++)                                             //print the middle line with the cars positions
+    {
+        printf("%c", Print_road[i + N]);
+        printf("%s", middle);
+        printf("%c\n", Print_road[4 * N - 5 - i]);
+    }
+    for (i = 2 * N - 2; i < 3 * N - 2; i++)                                 //print the last line
+        printf("%c", Print_road[i]);
+    printf("\n");
+}
