@@ -81,4 +81,64 @@ int main()
     for(i=0;i<4*N-4;i++)                                                //delete the mutexes
         pthread_mutex_destroy(&cell_mutex[i]);
     return 0;
+	
+}void* Step(void *arg) 
+//function for move a car to the next place
+{                                                 
+    int first_time = 1;                                                 //first time enter the road
+    struct timespec last_move;
+    struct timespec curr_move;
+    double time_in_ns = 0;
+    int move_permission = 0;
+    int generator_index=(int)(*(int *) arg);
+    int enter_location = generator_index * (N - 1);
+    int err=0;
+
+    while (first_time && !(generator_flag[generator_index]))            //create a new car
+    { 
+        pthread_mutex_lock(&cell_mutex[(enter_location - 1+ lEN) % lEN]);  //lock the position before the car generaor
+        err=pthread_mutex_trylock(&cell_mutex[enter_location]);         //try to lock the car position
+
+        if (err == 0)                                                   //if succeeded, change the road array
+        {
+            clock_gettime(CLOCK_REALTIME, &curr_move);
+            Print_road[enter_location] = '*';
+            pthread_mutex_unlock(&cell_mutex[(enter_location - 1 + lEN) % lEN]);
+            first_time = 0;
+        }
+        else
+            pthread_mutex_unlock(&cell_mutex[(enter_location - 1 + lEN) % lEN]); //unlock and continue
+    }
+
+    while (!(generator_flag[generator_index]))                          
+    {                        
+        while (!move_permission)                                        //move the car to the next place
+        {
+            clock_gettime(CLOCK_REALTIME, &last_move);
+            time_in_ns = (double)(last_move.tv_sec - curr_move.tv_sec) * 1000000000 + (double)(last_move.tv_nsec - curr_move.tv_nsec);
+            if (time_in_ns >= INTER_MOVES_IN_NS)                        //the interval is correct
+                move_permission = 1;
+        }
+        clock_gettime(CLOCK_REALTIME, &curr_move);                      
+        enter_location = enter_location + 1;
+        move_permission = 0;
+        
+        pthread_mutex_lock(&cell_mutex[(enter_location) % lEN] );           //change position if can
+        Print_road[(enter_location -1)%(4*N-4)] = ' ';
+        Print_road[enter_location %(4*N-4)] = '*';
+        pthread_mutex_unlock(&cell_mutex[(enter_location -1)%lEN] );
+        if(enter_location %(N-1)==0)                                        // if getting into the sink, check probability
+        {                                       
+            if((rand() % 100) <= 100*FIN_PROB)                              //calculate the probability of sinking
+            {
+                Print_road[enter_location %(4*N-4)] = ' ';                  //we sink
+                pthread_mutex_unlock(&cell_mutex[(enter_location) % lEN]);
+                return NULL;
+            }
+        }
+
+    }
+    if (!first_time)                                                       //open the mutex in the end
+        pthread_mutex_unlock(&cell_mutex[(enter_location) % lEN]);
+    return NULL;
 }
