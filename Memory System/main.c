@@ -243,3 +243,33 @@ void sim_init()
 }
 
 
+void procFunc(int proc_index)
+//func for the two proccess
+{
+	time_t t;
+	srand((unsigned)time(&t));				//init the rand func
+	message send;							//struct for the send message
+	message receive;						//struct for the receive message
+
+	send.mtype = PROCCESS_REQ;				//type is proccess request
+	send.ProcNum = proc_index + 1;			//the proccess is proc_index (0/1) +1 for proc 1/2
+
+	while (simflag)
+	{
+		usleep(INTER_MEM_ACCS_T / (double)1000);
+		if (rand() % 100 <= WR_RATE * 100)	//calculate if the request is RD/WR
+			send.reqType = WR_REQ;
+		else
+			send.reqType = RD_REQ;
+
+		if (simflag == 0)
+			break;
+
+		sprintf(send.mtext, "Process number %d request RD/WR 0/1 - %d\n", proc_index + 1, send.reqType); //save the message
+		send_message(queue_id, &send);		//send the message
+		read_message(queue_id, &receive, MMU_ACK_PROC1 + proc_index); //read the message that equal to the selected type
+
+	}
+}
+
+
