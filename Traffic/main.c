@@ -142,3 +142,51 @@ int main()
         pthread_mutex_unlock(&cell_mutex[(enter_location) % lEN]);
     return NULL;
 }
+
+void* Generate(void* arg) {
+    //function for the generation proccess
+    int i;
+    int generate_flag = 0;                                                  //if we can generate after the interval                                     
+    int end_of_simulation = 0;
+    struct timespec generate_time;
+    struct timespec car_interval;
+    int index = (int)(*(int*)arg);                                        //the index of the generator
+    int index_of_cars = 0;                                                  //index for the numbers of cars
+    double time_in_ns;
+    double car_generate_interval;
+
+
+    while (!end_of_simulation)                                              //while the simulation isnt over
+    {
+        clock_gettime(CLOCK_REALTIME, &generate_time);
+        time_in_ns = (double)(generate_time.tv_sec - start_time.tv_sec) * 1000000000 + (double)(generate_time.tv_nsec - start_time.tv_nsec);
+        if (time_in_ns < SIM_TIME * 1000000000)                             //check the time of the simulation
+        {
+            clock_gettime(CLOCK_REALTIME, &car_interval);
+            car_generate_interval = (rand() % (MAX_INTER_ARRIVAL_IN_NS + 1 - MIN_INTER_ARRIVAL_IN_NS)) + MIN_INTER_ARRIVAL_IN_NS; //randomize a number
+            while (!generate_flag)
+            {
+                clock_gettime(CLOCK_REALTIME, &generate_time);
+                time_in_ns = (double)(generate_time.tv_sec - car_interval.tv_sec) * 1000000000 + (double)(generate_time.tv_nsec - car_interval.tv_nsec);
+                if (time_in_ns >= car_generate_interval)                    //check if the interval of generation is correct
+                    generate_flag = 1;
+            }
+
+            if (pthread_create(&cars[index][index_of_cars], NULL, Step, ((void*)&index)) != 0) //create a new car thread
+            {
+                printf("CAR INIT FAILD\n");
+                exit(-1);
+            }
+            index_of_cars++;                                                //increase the number of cars
+            generate_flag = 0;                                              //change the flag and wait again for the interval
+        }
+        else                                                                //the simulation is over
+            end_of_simulation = 1;
+    }
+
+    generator_flag[index] = 1;                                              //mark the generator function to end the simulaton
+    for (i = 0; i < index_of_cars; i++)
+        pthread_join(cars[index][i], NULL);                                 //close all the cars threads of all the generators
+    return NULL;
+}
+
