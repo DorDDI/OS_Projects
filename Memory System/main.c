@@ -584,3 +584,92 @@ void* MMU_evicter()
 }
 
 
+void pages_lock()
+//lock the page table change 
+{
+	if (pthread_mutex_lock(&PageTable_mutex))		//safely lock page table mutex
+	{
+		printf("Error in locking mutex\n");
+		quit_simulation(1);
+	}
+}
+
+
+void pages_unlock()
+//unlock the page table change 
+{
+	if (pthread_mutex_unlock(&PageTable_mutex))		//safely unlock page table mutex
+	{
+		printf("Error in unlocking page tanle mutex\n");
+		quit_simulation(1);
+	}
+}
+
+
+void count_lock()
+//lock the counter change
+{
+	if (pthread_mutex_lock(&PageCount_mutex))		//safely lock page counter mutex
+	{
+		printf("Error in locking page table mutex\n");
+		quit_simulation(1);
+	}
+}
+
+
+void count_unlock()
+//unlock the counter change
+{
+	if (pthread_mutex_unlock(&PageCount_mutex))		//safely unlock page counter mutex
+	{
+		printf("Error in unlocking page count mutex\n");
+		quit_simulation(1);
+	}
+}
+
+
+void call_evicter()
+//func to handle the evicter condition
+{
+	usleep(1000 / (double)1000);
+
+	if (pthread_mutex_lock(&Condition_mutex))					//safely lock condition mutex
+	{
+		printf("Error in locking page count mutex\n");
+		quit_simulation(1);
+	}
+
+	if (pthread_cond_signal(&Evicter_condition))				//signal with the condition variable
+	{
+		printf("Error in signaling evicter\n");
+		quit_simulation(1);
+	}
+
+	if (pthread_mutex_unlock(&Condition_mutex))					//safely unlock condition mutex
+	{
+		printf("Error in unlocking mutex\n");
+		quit_simulation(1);
+	}
+
+	if (pthread_mutex_lock(&Condition_mutex))					//safely lock condition mutex
+	{
+		printf("Error in locking mutex\n");
+		quit_simulation(1);
+	}
+
+	//wait until the evicter func is finished and the MMU main can continue
+
+	if (pthread_cond_wait(&Evicter_condition, &Condition_mutex))  //wait for a signal from the condition
+	{
+		printf("Error in waiting for evicter\n");
+		quit_simulation(1);
+	}
+
+	if (pthread_mutex_unlock(&Condition_mutex))					//safely unlock condition mutex
+	{
+		printf("Error in unlocking condition variable mutex\n");
+		quit_simulation(1);
+	}
+}
+
+
