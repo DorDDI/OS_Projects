@@ -273,3 +273,19 @@ void procFunc(int proc_index)
 }
 
 
+void HDFunc()
+{
+	message send;							//struct for the send message
+	message receive;						//struct for the receive message
+	send.mtype = HD_ACK;				    //type is HD acknowledge
+	send.ProcNum = HD_ACK;
+	strcpy(send.mtext, "HD acknowledge");	//save the message 
+
+	while (simflag) {
+		read_message(queue_id, &receive, HD_REQ);	//read the message that equal to the selected type
+		usleep(HD_ACCS_T / (double)1000);			//sleep
+		send_message(queue_id, &send);				//send the message
+	}
+}
+
+
