@@ -88,3 +88,17 @@ void quit_simulation(int);			//finish simulation and destroy all proccesses, thr
 void send_message(int, struct message*);		//send a message to the queue
 void read_message(int, struct message*, long);	//recieve a message from the queue
 
+
+//~~~~~~~~~~~~~~~~~~ main pogram~~~~~~~~~~~~~~~~~~~
+
+int main()
+//main program
+{
+	sim_init();						//start the init func of the simuation
+	sleep(SIM_T);					//sleep until the sim is over
+	simflag = 0;
+	quit_simulation(0);				//quit the simulation with no errors encounter
+	return 0;
+}
+
+
