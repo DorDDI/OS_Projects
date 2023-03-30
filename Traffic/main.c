@@ -41,3 +41,44 @@ int main()
     
     srand(time(NULL));   //init for the rand function
     int i;
+
+ //~~~~~~~~~~~~~~~~~~ mutex init~~~~~~~~~~~~~~~~~~~
+    
+    if (pthread_mutexattr_init(&attr) != 0)                             //init for the attribute 
+    {                          
+        printf("Error in initializing mutex");
+        exit(-1);
+    }
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);         //set the mutex as error check type
+    for(i=0;i<4*N-4;i++)                                                //init all the cars mutex
+    {                                              
+        if (pthread_mutex_init(&cell_mutex[i], &attr) != 0) 
+        {
+            printf("Error in initializing mutex\n");
+            exit(-1);
+        }
+    }
+
+    clock_gettime(CLOCK_REALTIME,&start_time);                          //init the clock
+    for (i = 0; i < 4; i++)                                             //create 4 generators threads
+    {                                                
+        argg_index[i] = i;
+        if (pthread_create(&generator_func[i], NULL, Generate, (void*)&argg_index[i]) != 0) 
+        {
+            printf("Generator func initializing failed\n");
+            exit(-1);
+        }
+    }
+    if (pthread_create(&print_func,NULL,Print,NULL) !=0)                //create the print func thread 
+    {              
+        printf("Print func initializing failed\n");
+        exit(-1);
+    }
+
+    pthread_join(print_func,NULL);                                      //finish the print func
+    for(i=0;i<4;i++)                                                    //finish the generator funcs
+        pthread_join(generator_func[i],NULL);
+    for(i=0;i<4*N-4;i++)                                                //delete the mutexes
+        pthread_mutex_destroy(&cell_mutex[i]);
+    return 0;
+}
