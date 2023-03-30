@@ -102,3 +102,144 @@ int main()
 }
 
 
+void sim_init()
+//init the simulation
+{
+	key_t msgkey;							//key for the queue
+	time_t t;
+	int i, j;
+
+	srand((unsigned)time(&t));				//rand init
+
+	//create the queue with open queue func
+	msgkey = ftok(".", 'm');
+	if ((queue_id = open_queue(msgkey)) == -1) {
+		msgctl(queue_id, IPC_RMID, NULL);
+		printf("Error in creating queue\n");
+		exit(1);
+	}
+
+	// Create proccess
+	for (i = 0; i < 3; i++)
+	{
+		if ((pid[i] = fork()) < 0)
+		{
+			printf("Error in fork!\n");
+			for (j = i; j >= 0; j--) {
+				kill(pid[j], SIGKILL);
+			}
+			exit(1);
+		}
+
+		//run the function to evert proccess created
+		if (pid[i] == 0)
+		{
+			switch (i) {
+			case 0:     //Process 1
+				procFunc(i);
+				break;
+			case 1:     //Process 2
+				procFunc(i);
+				break;
+			case 2:     //HD
+				HDFunc();
+				break;
+			}
+		}
+	}
+
+	//the father will continue from here and become MMU
+
+	//init mutexes, conditions and threads. if error occurs, destory all previous inits
+	if (pthread_mutex_init(&PageTable_mutex, NULL))			//page table mutex
+	{
+		printf("Error in init page mutex!\n");
+		msgctl(queue_id, IPC_RMID, NULL);
+		for (j = 0; j < 3; j++)
+			kill(pid[j], SIGKILL);
+		pthread_mutex_destroy(&PageTable_mutex);
+		exit(1);
+	}
+
+	if (pthread_mutex_init(&PageCount_mutex, NULL))			//page counter mutex
+	{
+		printf("Error in init counter mutex!\n");
+		msgctl(queue_id, IPC_RMID, NULL);
+		for (j = 0; j < 3; j++)
+			kill(pid[j], SIGKILL);
+		pthread_mutex_destroy(&PageTable_mutex);
+		pthread_mutex_destroy(&PageCount_mutex);
+		exit(1);
+	}
+
+	if (pthread_mutex_init(&Condition_mutex, NULL))			//condition variable mutex
+	{
+		printf("Error in init condition mutex!\n");
+		msgctl(queue_id, IPC_RMID, NULL);
+		for (j = 0; j < 3; j++)
+			kill(pid[j], SIGKILL);
+		pthread_mutex_destroy(&PageTable_mutex);
+		pthread_mutex_destroy(&PageCount_mutex);
+		pthread_mutex_destroy(&Condition_mutex);
+		exit(1);
+	}
+
+	if (pthread_cond_init(&Evicter_condition, NULL))		//condition variable init
+	{
+		printf("Error in init evicter condition!\n");
+		msgctl(queue_id, IPC_RMID, NULL);
+		for (j = 0; j < 3; j++)
+			kill(pid[j], SIGKILL);
+		pthread_mutex_destroy(&PageTable_mutex);
+		pthread_mutex_destroy(&PageCount_mutex);
+		pthread_mutex_destroy(&Condition_mutex);
+		pthread_cond_destroy(&Evicter_condition);
+		exit(1);
+	}
+
+	if ((pthread_create(&tid[0], NULL, MMU_main, NULL)))	//MMU main thread init
+	{
+		printf("Error in creating MMU main thread\n");
+		msgctl(queue_id, IPC_RMID, NULL);
+		for (j = 0; j < 3; j++)
+			kill(pid[j], SIGKILL);
+		pthread_mutex_destroy(&PageTable_mutex);
+		pthread_mutex_destroy(&PageCount_mutex);
+		pthread_mutex_destroy(&Condition_mutex);
+		pthread_cond_destroy(&Evicter_condition);
+		pthread_cancel(tid[0]);
+		exit(1);
+	}
+	if ((pthread_create(&tid[1], NULL, MMU_evicter, NULL)))	//MMU evicter thread init
+	{
+		printf("Error in creating MMU evicter thread\n");
+		msgctl(queue_id, IPC_RMID, NULL);
+		for (j = 0; j < 3; j++)
+			kill(pid[j], SIGKILL);
+		pthread_mutex_destroy(&PageTable_mutex);
+		pthread_mutex_destroy(&PageCount_mutex);
+		pthread_mutex_destroy(&Condition_mutex);
+		pthread_cond_destroy(&Evicter_condition);
+		pthread_cancel(tid[0]);
+		pthread_cancel(tid[1]);
+		exit(1);
+	}
+
+	if ((pthread_create(&tid[2], NULL, MMU_printer, NULL)))	//MMU printer thread init
+	{
+		printf("Error in creating MMU printer thread\n");
+		msgctl(queue_id, IPC_RMID, NULL);
+		for (j = 0; j < 3; j++)
+			kill(pid[j], SIGKILL);
+		pthread_mutex_destroy(&PageTable_mutex);
+		pthread_mutex_destroy(&PageCount_mutex);
+		pthread_mutex_destroy(&Condition_mutex);
+		pthread_cond_destroy(&Evicter_condition);
+		pthread_cancel(tid[0]);
+		pthread_cancel(tid[1]);
+		pthread_cancel(tid[2]);
+		exit(1);
+	}
+}
+
+
