@@ -289,3 +289,41 @@ void HDFunc()
 }
 
 
+int open_queue(key_t keyval)
+//create the queue
+{
+	int qid;
+	if ((qid = msgget(keyval, IPC_CREAT | 0660)) == -1)
+	{
+		return(-1);
+	}
+	return(qid);
+}
+
+
+void send_message(int qid_f, struct message* qbuf)
+//send a message to the queue
+{
+	int result, length;
+	length = sizeof(struct message) - sizeof(long);
+	if ((result = msgsnd(qid_f, qbuf, length, 0)) == -1)
+	{
+		printf("Error in sending message\n");
+		quit_simulation(1);
+	}
+}
+
+
+void read_message(int qid_f, struct message* qbuf, long type)
+//recieve a message from the queue
+{
+	int     result, length;
+	length = sizeof(struct message) - sizeof(long);
+	if ((result = msgrcv(qid_f, qbuf, length, type, 0)) == -1)
+	{
+		printf("Error in receiving message\n");
+		quit_simulation(1);
+	}
+}
+
+
