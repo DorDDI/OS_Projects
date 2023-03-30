@@ -15,3 +15,29 @@
 #define SIM_TIME 2
 #define MAX_CARS  (int)(((SIM_TIME*1000000000)/(MIN_INTER_ARRIVAL_IN_NS))+10) //+10 for saftey
 #define lEN (4 * N - 4)
+//~~~~~~~~~~~~~~~~~~ prototype init~~~~~~~~~~~~~~~~~~~
+void* Step(void *arg);
+void* Print(void *arg);
+void* Generate(void *arg);
+void Print_in_road();
+
+//~~~~~~~~~~~~~~~~~~ mutex init~~~~~~~~~~~~~~~~~~~
+pthread_mutexattr_t attr;
+pthread_mutex_t cell_mutex[(4 * N) - 4] = { 0 };
+
+//~~~~~~~~~~~~~~~~~~ pthreads init~~~~~~~~~~~~~~~~~~~
+pthread_t print_func;
+pthread_t generator_func[4];
+pthread_t cars[4][(int)MAX_CARS] = { 0 };
+
+//~~~~~~~~~~~~~~~~~~ global variebles init~~~~~~~~~~~~~~~~~~~
+char Print_road[(4 * N) - 4] = { " " };
+int argg_index[4] = { 0 };
+int generator_flag[4] = {0,0,0,0};
+struct timespec start_time;
+
+int main() 
+{
+    
+    srand(time(NULL));   //init for the rand function
+    int i;
