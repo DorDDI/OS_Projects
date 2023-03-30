@@ -501,3 +501,86 @@ void* MMU_printer()
 }
 
 
+void* MMU_evicter()
+//func for the MMU main evicter
+{
+	
+	message send;					//struct for the send message
+	message recieve;				//struct for the recieve message
+
+	send.mtype = HD_REQ;			//type is HD request
+	send.ProcNum = HD_REQ;			//type is HD request
+	strcpy(send.mtext, "Evicter access");  	//save the message
+
+	while (simflag)
+	{
+		if (pthread_mutex_lock(&Condition_mutex))					//safely lock condition mutex
+		{
+			printf("Error in locking condition variable mutex\n");
+			quit_simulation(1);
+		}
+
+		if (pthread_cond_wait(&Evicter_condition, &Condition_mutex)) //wait for a signal from the condition
+		{
+			printf("Error in waiting for evicter\n");
+			quit_simulation(1);
+		}
+
+		if (pthread_mutex_unlock(&Condition_mutex))					//safely unlock condition mutex
+		{
+			printf("Error in unlocking condition variable mutex\n");
+			quit_simulation(1);
+		}
+
+		if (simflag == 0)
+			break;
+		while (page_count >= USED_SLOTS_TH)
+		{
+			if (simflag == 0)
+				break;
+			pages_lock();
+			if (page_table[Queue_index] == DIRTY)			//if dirty, write to HD
+			{
+				send_message(queue_id, &send);				//send message
+				read_message(queue_id, &recieve, HD_ACK);   //read the message that equal to the selected type
+			}
+
+			page_table[Queue_index] = INVALID;				//clear the page
+			Queue_index = (Queue_index + 1) % N;			//increase the queue pointer
+			pages_unlock();
+
+			if (simflag == 0)
+				break;
+
+			count_lock();
+			page_count--;									//decrease the counter safetly
+			count_unlock();
+
+			if ((page_count > N) || (page_count < 0))		//error in the counter range - quit
+				quit_simulation(1);
+			
+		}
+
+		//signal to the MMU that the evicting is finished (return to wake evicter)
+		if (pthread_mutex_lock(&Condition_mutex))		//safely lock condition mutex
+		{
+			printf("Error in locking condition variable mutex\n");
+			quit_simulation(1);
+		}
+
+		if (pthread_cond_signal(&Evicter_condition))	//signal with the condition variable
+		{
+			printf("Error in signaling mmu\n");
+			quit_simulation(1);
+		}
+
+		if (pthread_mutex_unlock(&Condition_mutex))		//safely unlock condition mutex
+		{
+			printf("Error in unlocking condition variable mutex\n");
+			quit_simulation(1);
+		}
+
+	}
+}
+
+
