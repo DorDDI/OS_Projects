@@ -673,3 +673,66 @@ void call_evicter()
 }
 
 
+void quit_simulation(int num)
+//finish simulation and destroy all proccesses, threads and mutex
+{
+	int i;
+	simflag = 0;
+	usleep(1000000 / (double)1000);
+
+	if (pthread_cond_signal(&Evicter_condition))	//signal with the condition variable
+	{
+		printf("Error in signaling mmu\n");
+		quit_simulation(1);
+	}
+
+	if (pthread_cond_signal(&Evicter_condition))	//signal with the condition variable
+	{
+		printf("Error in signaling mmu\n");
+		quit_simulation(1);
+	}
+
+
+	for (i = 0; i < 3; i++)								//destroy all the threads
+	{
+		if (pthread_join(tid[i],NULL))
+			printf("Error in destroying threads!\n");
+	}
+
+	for (i = 0; i < 3; i++)						    	//destroy all the proccesses
+		kill(pid[i], SIGKILL);
+
+	msgctl(queue_id, IPC_RMID, NULL);					//destroy the queue
+
+
+	if (pthread_mutex_destroy(&PageTable_mutex))		//destroy the page table mutex
+	{
+		printf("Error in destroying page table mutex\n");
+		num = 1;
+	}
+
+	if (pthread_mutex_destroy(&PageCount_mutex))		//destroy the page counter mutex
+	{
+		printf("Error in destroying page count mutex\n");
+		num = 1;
+	}
+
+
+	if (pthread_mutex_destroy(&Condition_mutex))		//destroy the condition variable mutex
+	{
+		printf("Error in destroying cv mutex\n");
+		num = 1;
+	}
+
+
+	if (pthread_cond_destroy(&Evicter_condition))		//destroy the condition variable
+	{
+		printf("Error in destroying cv evicter\n");
+		num = 1;
+	}
+
+	if (num == 1)
+		exit(1);										//exit with 1 if there was an error in the sim
+	else
+		printf("Successfully Finish Simulation\n");
+}
